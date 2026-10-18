@@ -26,8 +26,8 @@ The package uses a `src/` layout and is only importable after `uv sync`.
 
 ## Config
 - `core/config.py`: `Settings` + cached `get_settings()`. Required env vars:
-  `DATABASE_URL`, `REDIS_URL`. `Settings()` keeps a `# type: ignore[call-arg]`
-  (pydantic-settings fills required fields from the env) — do not remove it.
+  `DATABASE_URL`, `REDIS_URL`. The Pydantic mypy plugin is enabled, so
+  `Settings()` type-checks without a `# type: ignore`.
 
 ## Gotchas
 - `ruff` is configured in `pyproject.toml` and enforced by pre-commit

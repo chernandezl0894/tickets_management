@@ -1,0 +1,39 @@
+{
+  "tab_size": 4,
+  "hard_tabs": false,
+  "format_on_save": "on",
+  "ensure_final_newline_on_save": true,
+  "remove_trailing_whitespace_on_save": true,
+  "languages": {
+    "Python": {
+      "code_actions_on_format": {
+        "source.fixAll.ruff": true,
+        "source.organizeImports.ruff": true
+      },
+      "formatter": {
+        "language_server": {
+          "name": "ruff"
+        }
+      }
+    }
+  },
+  "lsp": {
+    "basedpyright": {
+      "settings": {
+        "basedpyright": {
+          "analysis": {
+            "typeCheckingMode": "strict"
+          }
+        }
+      }
+    },
+    "ruff": {
+      "initialization_options": {
+        "settings": {
+          "lineLength": 88,
+          "targetVersion": "py314"
+        }
+      }
+    }
+  }
+}

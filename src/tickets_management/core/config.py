@@ -68,8 +68,7 @@ def _format_config_error(exc: ValidationError) -> str:
 def get_settings() -> Settings:
     """Return a cached (singleton) Settings instance."""
     try:
-        # Required fields are populated from the environment, so mypy cannot
-        # see them as constructor arguments.
-        return Settings()  # type: ignore[call-arg]
+        # Required fields are populated from the environment.
+        return Settings()
     except ValidationError as exc:
         raise RuntimeError(_format_config_error(exc)) from exc

@@ -47,3 +47,8 @@ select = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["tickets_management"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+plugins = ["pydantic.mypy"]
