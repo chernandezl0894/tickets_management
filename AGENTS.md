@@ -15,6 +15,13 @@ The package uses a `src/` layout and is only importable after `uv sync`.
 - Lint/format: `uv run ruff check .` / `uv run ruff format .`
 - Types: `uv run mypy .`
 
+## Docker
+- Start stack (api + db + redis): `docker compose up -d`
+- Status/health: `docker compose ps`
+- Check Postgres: `docker compose exec db pg_isready -U user -d tickets_management`
+- Check Redis: `docker compose exec redis redis-cli ping`
+- Stop: `docker compose down` (`-v` also destroys volumes)
+
 ## Layout
 - Import name is `tickets_management` (underscore); distribution name is
   `tickets-management` (hyphen).
@@ -28,10 +35,13 @@ The package uses a `src/` layout and is only importable after `uv sync`.
 - `core/config.py`: `Settings` + cached `get_settings()`. Required env vars:
   `DATABASE_URL`, `REDIS_URL`. The Pydantic mypy plugin is enabled, so
   `Settings()` type-checks without a `# type: ignore`.
+- Drivers installed: `psycopg[binary]` (URL scheme `postgresql+psycopg`) and
+  `redis`; no DB/Redis connection logic exists yet.
 
 ## Gotchas
 - `ruff` is configured in `pyproject.toml` and enforced by pre-commit
   (`.pre-commit-config.yaml`); run `uv run pre-commit install` after cloning.
   `mypy`/`pytest` still run on defaults. No CI yet.
-- `Dockerfile` is empty and alembic is not wired up (`alembic/versions/` has no
-  `alembic.ini`/`env.py`).
+- Docker: one multi-stage `Dockerfile` (`development`/`production` targets) plus
+  `docker-compose.yml` (Postgres 16 + Redis 7). Alembic is still not wired up
+  (`alembic/versions/` has no `alembic.ini`/`env.py`).
