@@ -1,0 +1,117 @@
+# =============================================================================
+# .gitignore — tickets_management
+# Python + FastAPI + PostgreSQL + uv + AWS + Docker
+# =============================================================================
+
+# --- Entorno / secretos ------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# --- Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Byte-compiled / optimizado / caching
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+nosetests.xml
+junit.xml
+.cache/
+
+# --- uv ----------------------------------------------------------------------
+# uv.lock SE versiona a propósito: no lo ignores.
+.venv/
+venv/
+env/
+ENV/
+.uv/
+
+# --- FastAPI / app -----------------------------------------------------------
+*.log
+logs/
+instance/
+.envrc
+
+# --- PostgreSQL --------------------------------------------------------------
+# Volúmenes locales de datos y dumps (nunca subir datos de la BD al repo).
+.pgdata/
+pgdata/
+postgres-data/
+*.sql.gz
+*.dump
+# Nota: las migraciones de Alembic (*.py en alembic/versions/) SÍ se versionan.
+# Si alguna vez generas dumps .sql manuales, este patrón evita subirlos:
+# *.sql
+
+# --- AWS ---------------------------------------------------------------------
+.aws/
+.aws-sam/
+samconfig.*
+cdk.out/
+cdk.context.json
+*.pem
+*.key
+.terraform/
+*.tfstate
+*.tfstate.*
+# .terraform.lock.hcl SÍ se versiona: no lo ignores.
+# Credenciales / config de despliegue local
+aws-credentials*
+deploy-secrets*
+serverless.yml.lock
+
+# --- Docker ------------------------------------------------------------------
+.docker/
+docker-compose.override.yml
+docker-compose.*.local.yml
+*.dockerignore.local
+
+# --- Editores / IDE ----------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.sublime-project
+.sublime-workspace
+nbproject/
+
+# --- Sistema operativo -------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
