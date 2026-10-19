@@ -19,7 +19,12 @@ class Schema(BaseModel):
 class TitledSchema(Schema):
     """Schema with a required, validated title."""
 
-    title: str = Field(min_length=5, max_length=120)
+    title: str = Field(
+        min_length=5,
+        max_length=120,
+        description="Título descriptivo del recurso.",
+        examples=["Implementar inicio de sesión con OTP"],
+    )
 
     @field_validator("title", mode="before")
     @classmethod
@@ -31,7 +36,13 @@ class TitledSchema(Schema):
 class OptionalTitledSchema(Schema):
     """Schema with an optional, validated title for partial updates."""
 
-    title: str | None = Field(default=None, min_length=5, max_length=120)
+    title: str | None = Field(
+        default=None,
+        min_length=5,
+        max_length=120,
+        description="Nuevo título descriptivo del recurso.",
+        examples=["Actualizar el flujo de autenticación"],
+    )
 
     @field_validator("title", mode="before")
     @classmethod

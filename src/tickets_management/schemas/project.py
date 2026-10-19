@@ -14,11 +14,31 @@ SLUG_PATTERN = r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
 class ProjectCreate(Schema):
     """Payload accepted when registering a project."""
 
-    name: str
-    slug: str = Field(pattern=SLUG_PATTERN)
-    platform: Platform
-    repo_url: HttpUrl
-    description: str = ""
+    name: str = Field(
+        description="Nombre visible del proyecto.",
+        examples=["Tickets Management"],
+    )
+    slug: str = Field(
+        pattern=SLUG_PATTERN,
+        description=(
+            "Identificador URL único, en minúsculas y separado por guiones. "
+            "No puede repetirse entre proyectos."
+        ),
+        examples=["tickets-management"],
+    )
+    platform: Platform = Field(
+        description="Plataforma de origen del repositorio.",
+        examples=["github"],
+    )
+    repo_url: HttpUrl = Field(
+        description="URL pública del repositorio o espacio de trabajo.",
+        examples=["https://github.com/example/tickets-management"],
+    )
+    description: str = Field(
+        default="",
+        description="Descripción libre del proyecto.",
+        examples=["Servicio centralizado de gestión de tickets."],
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -27,7 +47,7 @@ class ProjectCreate(Schema):
                 "slug": "tickets-management",
                 "platform": "github",
                 "repo_url": "https://github.com/example/tickets-management",
-                "description": "Centralized ticket management service.",
+                "description": "Servicio centralizado de gestión de tickets.",
             }
         }
     )
@@ -36,30 +56,83 @@ class ProjectCreate(Schema):
 class ProjectUpdate(Schema):
     """Payload accepted when partially updating a project."""
 
-    name: str | None = None
-    slug: str | None = Field(default=None, pattern=SLUG_PATTERN)
-    platform: Platform | None = None
-    repo_url: HttpUrl | None = None
-    description: str | None = None
-    is_active: bool | None = None
+    name: str | None = Field(
+        default=None,
+        description="Nuevo nombre visible del proyecto.",
+        examples=["Tickets Management Renombrado"],
+    )
+    slug: str | None = Field(
+        default=None,
+        pattern=SLUG_PATTERN,
+        description="Nuevo identificador URL único del proyecto.",
+        examples=["tickets-management-v2"],
+    )
+    platform: Platform | None = Field(
+        default=None,
+        description="Nueva plataforma de origen.",
+        examples=["gitlab"],
+    )
+    repo_url: HttpUrl | None = Field(
+        default=None,
+        description="Nueva URL del repositorio.",
+        examples=["https://gitlab.com/example/tickets-management"],
+    )
+    description: str | None = Field(
+        default=None,
+        description="Nueva descripción libre del proyecto.",
+        examples=["Descripción actualizada del proyecto."],
+    )
+    is_active: bool | None = Field(
+        default=None,
+        description=(
+            "Indica si el proyecto admite nuevos tickets. Al desactivarlo, "
+            "los tickets existentes se conservan."
+        ),
+        examples=[False],
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "name": "Tickets Management Renombrado",
+                "is_active": False,
+            }
+        }
+    )
 
 
 class ProjectRead(Schema):
     """Project data exposed to API clients."""
 
-    id: UUID
-    name: str
-    slug: str
-    platform: Platform
-    repo_url: HttpUrl
-    description: str
-    is_active: bool
-    created_at: datetime
-    updated_at: datetime
+    id: UUID = Field(description="Identificador único del proyecto.")
+    name: str = Field(description="Nombre visible del proyecto.")
+    slug: str = Field(description="Identificador URL único del proyecto.")
+    platform: Platform = Field(description="Plataforma de origen.")
+    repo_url: HttpUrl = Field(description="URL del repositorio.")
+    description: str = Field(description="Descripción libre del proyecto.")
+    is_active: bool = Field(description="Indica si el proyecto admite nuevos tickets.")
+    created_at: datetime = Field(description="Fecha de creación en UTC.")
+    updated_at: datetime = Field(description="Fecha de la última actualización en UTC.")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "name": "Tickets Management",
+                "slug": "tickets-management",
+                "platform": "github",
+                "repo_url": "https://github.com/example/tickets-management",
+                "description": "Servicio centralizado de gestión de tickets.",
+                "is_active": True,
+                "created_at": "2026-01-01T12:00:00Z",
+                "updated_at": "2026-01-01T12:00:00Z",
+            }
+        }
+    )
 
 
 class ProjectList(Schema):
     """Paginated list of projects."""
 
-    items: list[ProjectRead]
-    total: int
+    items: list[ProjectRead] = Field(description="Proyectos de la página actual.")
+    total: int = Field(description="Número total de proyectos registrados.")

@@ -6,7 +6,7 @@ from http import HTTPStatus
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger(__name__)
@@ -54,20 +54,61 @@ RepositoryError = BusinessRuleError
 class InvalidField(BaseModel):
     """One invalid request field and its location."""
 
-    loc: list[str | int]
-    msg: str
-    type: str
+    loc: list[str | int] = Field(
+        description="Ruta del campo inválido, incluyendo su origen.",
+        examples=[["body", "title"]],
+    )
+    msg: str = Field(
+        description="Descripción legible del error de validación.",
+        examples=["String should have at least 5 characters"],
+    )
+    type: str = Field(
+        description="Identificador estable del tipo de error.",
+        examples=["string_too_short"],
+    )
 
 
 class ProblemDetail(BaseModel):
     """RFC 9457 problem details payload."""
 
-    type: str
-    title: str
-    status: int
-    detail: str
-    instance: str
-    errors: list[InvalidField] | None = None
+    type: str = Field(
+        description="URI que identifica el tipo de problema.",
+        examples=["https://tickets-management.local/problems/not-found"],
+    )
+    title: str = Field(
+        description="Resumen legible del tipo de problema.",
+        examples=["Resource not found"],
+    )
+    status: int = Field(
+        description="Código HTTP de la respuesta.",
+        examples=[404],
+    )
+    detail: str = Field(
+        description="Explicación legible de esta instancia concreta.",
+        examples=["Ticket with id 7c9e6679-7425-40de-944b-e07fc1f90ae7 not found"],
+    )
+    instance: str = Field(
+        description="Ruta de la solicitud que provocó el problema.",
+        examples=["/api/v1/tickets/7c9e6679-7425-40de-944b-e07fc1f90ae7"],
+    )
+    errors: list[InvalidField] | None = Field(
+        default=None,
+        description="Campos inválidos. Solo aparece en errores de validación.",
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "type": "https://tickets-management.local/problems/not-found",
+                "title": "Resource not found",
+                "status": 404,
+                "detail": (
+                    "Ticket with id 7c9e6679-7425-40de-944b-e07fc1f90ae7 not found"
+                ),
+                "instance": "/api/v1/tickets/7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            }
+        }
+    )
 
 
 def _problem_response(problem: ProblemDetail) -> JSONResponse:

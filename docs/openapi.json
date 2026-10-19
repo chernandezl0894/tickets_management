@@ -1,0 +1,2171 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Tickets Management API",
+    "summary": "API REST para gestionar proyectos, tickets y subtareas.",
+    "description": "\n## Descripción\n\nEsta API centraliza proyectos de distintas plataformas y permite gestionar sus\ntickets, prioridades, fechas límite y subtareas desde un único lugar.\n\n### Capacidades principales\n\n- CRUD de **proyectos** con control de `slug` único y borrado en cascada.\n- CRUD de **tickets** con filtros, prioridades y reglas de transición de estado.\n- **Subtareas** anidadas con posición automática y reordenamiento.\n- Errores consistentes basados en **RFC 9457** con el media type\n  `application/problem+json`.\n\n### Códigos de error\n\n| Código | Significado |\n|---|---|\n| `404` | El recurso solicitado no existe. |\n| `409` | La operación entra en conflicto con el estado actual. |\n| `422` | La solicitud contiene parámetros o campos inválidos. |\n| `500` | Ocurrió un error interno inesperado. |\n\n### Documentación interactiva\n\n- [Swagger UI](/docs)\n- [ReDoc](/redoc)\n- [Esquema OpenAPI](/openapi.json)\n",
+    "contact": {
+      "name": "Cristhian Hernandez",
+      "url": "https://github.com/chernandezl0894/tickets_management"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/api/v1/projects": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Listar proyectos",
+        "description": "Devuelve una página de proyectos ordenados por fecha de creación. Usa `limit` y `offset` para navegar por los resultados. El total de proyectos se incluye en el cuerpo y en la cabecera `X-Total-Count`.",
+        "operationId": "list_projects_api_v1_projects_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró el proyecto solicitado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe un proyecto con el slug indicado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Crear proyecto",
+        "description": "Registra un proyecto nuevo. El `slug` debe ser único y cumplir el formato URL en minúsculas. Devuelve el proyecto creado con sus identificadores y fechas de auditoría.",
+        "operationId": "create_project_api_v1_projects_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró el proyecto solicitado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe un proyecto con el slug indicado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Obtener proyecto",
+        "description": "Devuelve un proyecto por su identificador. Responde `404` si el proyecto no existe.",
+        "operationId": "get_project_api_v1_projects__project_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró el proyecto solicitado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe un proyecto con el slug indicado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Actualizar proyecto",
+        "description": "Actualiza parcialmente un proyecto. Solo se modifican los campos enviados. Si se cambia el `slug`, el nuevo valor debe seguir siendo único. Al desactivar un proyecto se conservan sus tickets existentes.",
+        "operationId": "update_project_api_v1_projects__project_id__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró el proyecto solicitado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe un proyecto con el slug indicado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Eliminar proyecto",
+        "description": "Elimina un proyecto junto con todos sus tickets y subtareas. La operación es irreversible y responde `204` sin cuerpo.",
+        "operationId": "delete_project_api_v1_projects__project_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No se encontró el proyecto solicitado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe un proyecto con el slug indicado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets": {
+      "get": {
+        "tags": [
+          "tickets"
+        ],
+        "summary": "Listar tickets",
+        "description": "Devuelve los tickets que cumplen los filtros opcionales. Los resultados se ordenan por prioridad descendente (`high`, `medium`, `low`) y, dentro de cada prioridad, por fecha límite ascendente. Los tickets sin fecha límite se colocan al final.",
+        "operationId": "list_tickets_api_v1_tickets_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TicketType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Priority"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Priority"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TicketStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TicketRead"
+                  },
+                  "title": "Response List Tickets Api V1 Tickets Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró el ticket o el proyecto indicado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La operación infringe una regla de negocio del ticket.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "tickets"
+        ],
+        "summary": "Crear ticket",
+        "description": "Crea un ticket dentro de un proyecto activo. Los valores por defecto son prioridad `medium` y estado `open`. La fecha límite, si se envía, debe estar en el futuro. Responde `404` si el proyecto no existe y `409` si está inactivo.",
+        "operationId": "create_ticket_api_v1_tickets_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró el ticket o el proyecto indicado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La operación infringe una regla de negocio del ticket.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{ticket_id}": {
+      "get": {
+        "tags": [
+          "tickets"
+        ],
+        "summary": "Obtener ticket",
+        "description": "Devuelve un ticket por su identificador. Usa `include=subtasks` para añadir el checklist completo del ticket a la respuesta.",
+        "operationId": "get_ticket_api_v1_tickets__ticket_id__get",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "const": "subtasks",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Incluye las subtareas del ticket cuando vale `subtasks`.",
+              "examples": [
+                "subtasks"
+              ],
+              "title": "Include"
+            },
+            "description": "Incluye las subtareas del ticket cuando vale `subtasks`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró el ticket o el proyecto indicado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La operación infringe una regla de negocio del ticket.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "tickets"
+        ],
+        "summary": "Actualizar ticket",
+        "description": "Actualiza parcialmente un ticket. Solo se modifican los campos enviados. No se puede pasar a `done` mientras existan subtareas pendientes; en ese caso responde `409`.",
+        "operationId": "update_ticket_api_v1_tickets__ticket_id__patch",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró el ticket o el proyecto indicado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La operación infringe una regla de negocio del ticket.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "tickets"
+        ],
+        "summary": "Eliminar ticket",
+        "description": "Elimina un ticket y todas sus subtareas. La operación es irreversible y responde `204` sin cuerpo.",
+        "operationId": "delete_ticket_api_v1_tickets__ticket_id__delete",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No se encontró el ticket o el proyecto indicado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La operación infringe una regla de negocio del ticket.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/subtasks": {
+      "get": {
+        "tags": [
+          "subtasks"
+        ],
+        "summary": "Listar subtareas",
+        "description": "Devuelve el checklist de un ticket ordenado por `position`. Responde `404` si el ticket no existe.",
+        "operationId": "list_ticket_subtasks_api_v1_tickets__ticket_id__subtasks_get",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubtaskRead"
+                  },
+                  "title": "Response List Ticket Subtasks Api V1 Tickets  Ticket Id  Subtasks Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró el ticket o la subtarea solicitada.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La operación entra en conflicto con el estado actual de la subtarea.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "subtasks"
+        ],
+        "summary": "Crear subtarea",
+        "description": "Añade una subtarea al final del checklist del ticket. La posición se asigna automáticamente. Responde `404` si el ticket no existe.",
+        "operationId": "create_ticket_subtask_api_v1_tickets__ticket_id__subtasks_post",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubtaskCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubtaskRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró el ticket o la subtarea solicitada.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La operación entra en conflicto con el estado actual de la subtarea.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/subtasks/{subtask_id}": {
+      "patch": {
+        "tags": [
+          "subtasks"
+        ],
+        "summary": "Actualizar subtarea",
+        "description": "Renombra una subtarea o cambia su estado de completada. La subtarea debe pertenecer al ticket indicado; de lo contrario responde `404`.",
+        "operationId": "update_ticket_subtask_api_v1_tickets__ticket_id__subtasks__subtask_id__patch",
+        "parameters": [
+          {
+            "name": "subtask_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Subtask Id"
+            }
+          },
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubtaskUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubtaskRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró el ticket o la subtarea solicitada.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La operación entra en conflicto con el estado actual de la subtarea.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "subtasks"
+        ],
+        "summary": "Eliminar subtarea",
+        "description": "Elimina una subtarea y reordena las posiciones restantes sin dejar huecos. Responde `404` si el ticket o la subtarea no existen.",
+        "operationId": "delete_ticket_subtask_api_v1_tickets__ticket_id__subtasks__subtask_id__delete",
+        "parameters": [
+          {
+            "name": "subtask_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Subtask Id"
+            }
+          },
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No se encontró el ticket o la subtarea solicitada.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La operación entra en conflicto con el estado actual de la subtarea.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "root"
+        ],
+        "summary": "Información de la API",
+        "description": "Devuelve el nombre de la API y el enlace a Swagger UI.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Root  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Consultar estado del servicio",
+        "description": "Devuelve el estado operativo y el entorno actual.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "InvalidField": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Loc",
+            "description": "Ruta del campo inválido, incluyendo su origen.",
+            "examples": [
+              [
+                "body",
+                "title"
+              ]
+            ]
+          },
+          "msg": {
+            "type": "string",
+            "title": "Msg",
+            "description": "Descripción legible del error de validación.",
+            "examples": [
+              "String should have at least 5 characters"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Identificador estable del tipo de error.",
+            "examples": [
+              "string_too_short"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "InvalidField",
+        "description": "One invalid request field and its location."
+      },
+      "Platform": {
+        "type": "string",
+        "enum": [
+          "github",
+          "gitlab",
+          "bitbucket",
+          "azure_devops",
+          "other"
+        ],
+        "title": "Platform",
+        "description": "Supported source-control platforms."
+      },
+      "Priority": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "title": "Priority",
+        "description": "Ticket urgency levels."
+      },
+      "ProblemDetail": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "URI que identifica el tipo de problema.",
+            "examples": [
+              "https://tickets-management.local/problems/not-found"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Resumen legible del tipo de problema.",
+            "examples": [
+              "Resource not found"
+            ]
+          },
+          "status": {
+            "type": "integer",
+            "title": "Status",
+            "description": "Código HTTP de la respuesta.",
+            "examples": [
+              404
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "description": "Explicación legible de esta instancia concreta.",
+            "examples": [
+              "Ticket with id 7c9e6679-7425-40de-944b-e07fc1f90ae7 not found"
+            ]
+          },
+          "instance": {
+            "type": "string",
+            "title": "Instance",
+            "description": "Ruta de la solicitud que provocó el problema.",
+            "examples": [
+              "/api/v1/tickets/7c9e6679-7425-40de-944b-e07fc1f90ae7"
+            ]
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/InvalidField"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors",
+            "description": "Campos inválidos. Solo aparece en errores de validación."
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "instance"
+        ],
+        "title": "ProblemDetail",
+        "description": "RFC 9457 problem details payload.",
+        "example": {
+          "detail": "Ticket with id 7c9e6679-7425-40de-944b-e07fc1f90ae7 not found",
+          "instance": "/api/v1/tickets/7c9e6679-7425-40de-944b-e07fc1f90ae7",
+          "status": 404,
+          "title": "Resource not found",
+          "type": "https://tickets-management.local/problems/not-found"
+        }
+      },
+      "ProjectCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Nombre visible del proyecto.",
+            "examples": [
+              "Tickets Management"
+            ]
+          },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "title": "Slug",
+            "description": "Identificador URL único, en minúsculas y separado por guiones. No puede repetirse entre proyectos.",
+            "examples": [
+              "tickets-management"
+            ]
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "description": "Plataforma de origen del repositorio.",
+            "examples": [
+              "github"
+            ]
+          },
+          "repo_url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Repo Url",
+            "description": "URL pública del repositorio o espacio de trabajo.",
+            "examples": [
+              "https://github.com/example/tickets-management"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Descripción libre del proyecto.",
+            "default": "",
+            "examples": [
+              "Servicio centralizado de gestión de tickets."
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "slug",
+          "platform",
+          "repo_url"
+        ],
+        "title": "ProjectCreate",
+        "description": "Payload accepted when registering a project.",
+        "example": {
+          "description": "Servicio centralizado de gestión de tickets.",
+          "name": "Tickets Management",
+          "platform": "github",
+          "repo_url": "https://github.com/example/tickets-management",
+          "slug": "tickets-management"
+        }
+      },
+      "ProjectList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectRead"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "Proyectos de la página actual."
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Número total de proyectos registrados."
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ProjectList",
+        "description": "Paginated list of projects."
+      },
+      "ProjectRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "Identificador único del proyecto."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Nombre visible del proyecto."
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug",
+            "description": "Identificador URL único del proyecto."
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "description": "Plataforma de origen."
+          },
+          "repo_url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Repo Url",
+            "description": "URL del repositorio."
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Descripción libre del proyecto."
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "Indica si el proyecto admite nuevos tickets."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Fecha de creación en UTC."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "Fecha de la última actualización en UTC."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "platform",
+          "repo_url",
+          "description",
+          "is_active",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProjectRead",
+        "description": "Project data exposed to API clients.",
+        "example": {
+          "created_at": "2026-01-01T12:00:00Z",
+          "description": "Servicio centralizado de gestión de tickets.",
+          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "is_active": true,
+          "name": "Tickets Management",
+          "platform": "github",
+          "repo_url": "https://github.com/example/tickets-management",
+          "slug": "tickets-management",
+          "updated_at": "2026-01-01T12:00:00Z"
+        }
+      },
+      "ProjectUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Nuevo nombre visible del proyecto.",
+            "examples": [
+              "Tickets Management Renombrado"
+            ]
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug",
+            "description": "Nuevo identificador URL único del proyecto.",
+            "examples": [
+              "tickets-management-v2"
+            ]
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Platform"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nueva plataforma de origen.",
+            "examples": [
+              "gitlab"
+            ]
+          },
+          "repo_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repo Url",
+            "description": "Nueva URL del repositorio.",
+            "examples": [
+              "https://gitlab.com/example/tickets-management"
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Nueva descripción libre del proyecto.",
+            "examples": [
+              "Descripción actualizada del proyecto."
+            ]
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active",
+            "description": "Indica si el proyecto admite nuevos tickets. Al desactivarlo, los tickets existentes se conservan.",
+            "examples": [
+              false
+            ]
+          }
+        },
+        "type": "object",
+        "title": "ProjectUpdate",
+        "description": "Payload accepted when partially updating a project.",
+        "example": {
+          "is_active": false,
+          "name": "Tickets Management Renombrado"
+        }
+      },
+      "SubtaskCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 5,
+            "title": "Title",
+            "description": "Título descriptivo del recurso.",
+            "examples": [
+              "Implementar inicio de sesión con OTP"
+            ]
+          },
+          "is_done": {
+            "type": "boolean",
+            "title": "Is Done",
+            "description": "Indica si la subtarea ya está completada.",
+            "default": false,
+            "examples": [
+              false
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "SubtaskCreate",
+        "description": "Payload accepted when creating a subtask inside a ticket.",
+        "example": {
+          "is_done": false,
+          "title": "Escribir pruebas de integración"
+        }
+      },
+      "SubtaskRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "Identificador único de la subtarea."
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Ticket Id",
+            "description": "Identificador del ticket propietario."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Título descriptivo de la subtarea."
+          },
+          "is_done": {
+            "type": "boolean",
+            "title": "Is Done",
+            "description": "Indica si la subtarea está completada."
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position",
+            "description": "Posición de la subtarea dentro del checklist."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Fecha de creación en UTC."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "Fecha de la última actualización en UTC."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "ticket_id",
+          "title",
+          "is_done",
+          "position",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SubtaskRead",
+        "description": "Subtask data exposed to API clients.",
+        "example": {
+          "created_at": "2026-01-01T12:00:00Z",
+          "id": "9b2f4c1a-8d3e-4f5a-b6c7-d8e9f0a1b2c3",
+          "is_done": false,
+          "position": 0,
+          "ticket_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+          "title": "Escribir pruebas de integración",
+          "updated_at": "2026-01-01T12:00:00Z"
+        }
+      },
+      "SubtaskUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 5
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "description": "Nuevo título descriptivo del recurso.",
+            "examples": [
+              "Actualizar el flujo de autenticación"
+            ]
+          },
+          "is_done": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Done",
+            "description": "Marca la subtarea como completada o pendiente.",
+            "examples": [
+              true
+            ]
+          }
+        },
+        "type": "object",
+        "title": "SubtaskUpdate",
+        "description": "Payload accepted when partially updating a subtask.",
+        "example": {
+          "is_done": true,
+          "title": "Revisar las pruebas de integración"
+        }
+      },
+      "TicketCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 5,
+            "title": "Title",
+            "description": "Título descriptivo del recurso.",
+            "examples": [
+              "Implementar inicio de sesión con OTP"
+            ]
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Project Id",
+            "description": "Identificador del proyecto al que pertenece el ticket.",
+            "examples": [
+              "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+            ]
+          },
+          "type": {
+            "$ref": "#/components/schemas/TicketType",
+            "description": "Tipo de trabajo representado por el ticket.",
+            "examples": [
+              "feature"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Descripción detallada del trabajo.",
+            "default": "",
+            "examples": [
+              "Añadir el flujo de autenticación OTP para usuarios de Telegram."
+            ]
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority",
+            "description": "Prioridad del ticket.",
+            "default": "medium",
+            "examples": [
+              "medium"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/TicketStatus",
+            "description": "Estado inicial del ticket.",
+            "default": "open",
+            "examples": [
+              "open"
+            ]
+          },
+          "external_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Ref",
+            "description": "Referencia externa, por ejemplo el identificador del issue.",
+            "examples": [
+              "GH-42"
+            ]
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At",
+            "description": "Fecha límite en formato ISO 8601. Debe estar en el futuro.",
+            "examples": [
+              "2030-01-01T12:00:00Z"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "project_id",
+          "type"
+        ],
+        "title": "TicketCreate",
+        "description": "Payload accepted when creating a ticket.",
+        "example": {
+          "description": "Añadir el flujo de autenticación OTP para Telegram.",
+          "due_at": "2030-01-01T12:00:00Z",
+          "external_ref": "GH-42",
+          "priority": "medium",
+          "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "status": "open",
+          "title": "Implementar inicio de sesión con OTP",
+          "type": "feature"
+        }
+      },
+      "TicketRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "Identificador único del ticket."
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Project Id",
+            "description": "Identificador del proyecto propietario."
+          },
+          "type": {
+            "$ref": "#/components/schemas/TicketType",
+            "description": "Tipo de trabajo del ticket."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Título descriptivo del ticket."
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Descripción detallada del trabajo."
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority",
+            "description": "Prioridad del ticket."
+          },
+          "status": {
+            "$ref": "#/components/schemas/TicketStatus",
+            "description": "Estado actual del ticket."
+          },
+          "external_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Ref",
+            "description": "Referencia externa opcional."
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At",
+            "description": "Fecha límite opcional en UTC."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Fecha de creación en UTC."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "Fecha de la última actualización en UTC."
+          },
+          "subtasks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SubtaskRead"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtasks",
+            "description": "Subtareas del ticket. Solo se incluyen cuando la consulta usa `include=subtasks`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "type",
+          "title",
+          "description",
+          "priority",
+          "status",
+          "external_ref",
+          "due_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TicketRead",
+        "description": "Ticket data exposed to API clients.",
+        "example": {
+          "created_at": "2026-01-01T12:00:00Z",
+          "description": "Añadir el flujo de autenticación OTP para Telegram.",
+          "due_at": "2030-01-01T12:00:00Z",
+          "external_ref": "GH-42",
+          "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+          "priority": "high",
+          "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "status": "in_progress",
+          "subtasks": [],
+          "title": "Implementar inicio de sesión con OTP",
+          "type": "feature",
+          "updated_at": "2026-01-02T08:30:00Z"
+        }
+      },
+      "TicketStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "in_progress",
+          "blocked",
+          "done",
+          "closed"
+        ],
+        "title": "TicketStatus",
+        "description": "Lifecycle states of a ticket."
+      },
+      "TicketType": {
+        "type": "string",
+        "enum": [
+          "case",
+          "feature",
+          "request",
+          "issue"
+        ],
+        "title": "TicketType",
+        "description": "Kind of work tracked by a ticket."
+      },
+      "TicketUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 5
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "description": "Nuevo título descriptivo del recurso.",
+            "examples": [
+              "Actualizar el flujo de autenticación"
+            ]
+          },
+          "type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TicketType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nuevo tipo de trabajo del ticket.",
+            "examples": [
+              "issue"
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Nueva descripción detallada del trabajo.",
+            "examples": [
+              "Descripción actualizada del ticket."
+            ]
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Priority"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nueva prioridad del ticket.",
+            "examples": [
+              "high"
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TicketStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nuevo estado. No se puede pasar a `done` mientras existan subtareas pendientes.",
+            "examples": [
+              "in_progress"
+            ]
+          },
+          "external_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Ref",
+            "description": "Nueva referencia externa del ticket.",
+            "examples": [
+              "GH-99"
+            ]
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At",
+            "description": "Nueva fecha límite en formato ISO 8601, en el futuro.",
+            "examples": [
+              "2031-06-30T18:00:00Z"
+            ]
+          }
+        },
+        "type": "object",
+        "title": "TicketUpdate",
+        "description": "Payload accepted when partially updating a ticket.",
+        "example": {
+          "priority": "high",
+          "status": "in_progress"
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "projects",
+      "description": "Registro y administración de proyectos. Cada proyecto define la plataforma, el repositorio y el estado que comparten sus tickets."
+    },
+    {
+      "name": "tickets",
+      "description": "Gestión de tickets, filtros, prioridades, fechas límite y reglas de transición de estado."
+    },
+    {
+      "name": "subtasks",
+      "description": "Checklist anidada de cada ticket. Las subtareas se ordenan por posición y se eliminan junto con su ticket."
+    },
+    {
+      "name": "root",
+      "description": "Información básica de la API y enlace a su documentación."
+    },
+    {
+      "name": "health",
+      "description": "Estado operativo del servicio."
+    }
+  ]
+}

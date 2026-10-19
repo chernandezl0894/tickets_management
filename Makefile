@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install run lint format typecheck test test-cov check up down logs clean
+.PHONY: help install run lint format typecheck test test-cov check openapi up down logs clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -30,6 +30,9 @@ test-cov:  ## Run tests with coverage
 	uv run pytest --cov=tickets_management
 
 check: lint typecheck test  ## Run lint, typecheck and tests (CI)
+
+openapi:  ## Export the OpenAPI schema to docs/openapi.json
+	uv run python scripts/export_openapi.py
 
 up:  ## Start the Docker Compose stack
 	docker compose up -d

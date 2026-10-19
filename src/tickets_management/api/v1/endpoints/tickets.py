@@ -1,34 +1,25 @@
 """Ticket API endpoints."""
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, status
 
 from tickets_management.api.deps import (
-    SubtaskDep,
     TicketDep,
     TicketFilterDep,
     get_subtask_service,
     get_ticket_service,
 )
-from tickets_management.schemas.subtask import (
-    SubtaskCreate,
-    SubtaskRead,
-    SubtaskUpdate,
-)
+from tickets_management.core.openapi import problem_responses
+from tickets_management.schemas.subtask import SubtaskRead
 from tickets_management.schemas.ticket import TicketCreate, TicketRead, TicketUpdate
 from tickets_management.services.subtasks import SubtaskService
 from tickets_management.services.tickets import TicketService
 
-COMMON_RESPONSES: dict[int | str, dict[str, Any]] = {
-    status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error"},
-}
-NOT_FOUND_RESPONSES: dict[int | str, dict[str, Any]] = {
-    status.HTTP_404_NOT_FOUND: {"description": "Ticket not found"},
-}
-CONFLICT_RESPONSES: dict[int | str, dict[str, Any]] = {
-    status.HTTP_409_CONFLICT: {"description": "Business rule conflict"},
-}
+COMMON_RESPONSES = problem_responses(
+    not_found="No se encontró el ticket o el proyecto indicado.",
+    conflict="La operación infringe una regla de negocio del ticket.",
+)
 
 router = APIRouter(
     prefix="/tickets",
@@ -37,7 +28,17 @@ router = APIRouter(
 )
 
 
-@router.get("", response_model=list[TicketRead], summary="List tickets")
+@router.get(
+    "",
+    response_model=list[TicketRead],
+    summary="Listar tickets",
+    description=(
+        "Devuelve los tickets que cumplen los filtros opcionales. Los "
+        "resultados se ordenan por prioridad descendente (`high`, `medium`, "
+        "`low`) y, dentro de cada prioridad, por fecha límite ascendente. Los "
+        "tickets sin fecha límite se colocan al final."
+    ),
+)
 def list_tickets(
     filters: TicketFilterDep,
     service: Annotated[TicketService, Depends(get_ticket_service)],
@@ -56,8 +57,13 @@ def list_tickets(
     "",
     response_model=TicketRead,
     status_code=status.HTTP_201_CREATED,
-    responses=NOT_FOUND_RESPONSES | CONFLICT_RESPONSES,
-    summary="Create ticket",
+    summary="Crear ticket",
+    description=(
+        "Crea un ticket dentro de un proyecto activo. Los valores por defecto "
+        "son prioridad `medium` y estado `open`. La fecha límite, si se envía, "
+        "debe estar en el futuro. Responde `404` si el proyecto no existe y "
+        "`409` si está inactivo."
+    ),
 )
 def create_ticket(
     payload: TicketCreate,
@@ -70,13 +76,22 @@ def create_ticket(
 @router.get(
     "/{ticket_id}",
     response_model=TicketRead,
-    responses=NOT_FOUND_RESPONSES,
-    summary="Get ticket",
+    summary="Obtener ticket",
+    description=(
+        "Devuelve un ticket por su identificador. Usa `include=subtasks` para "
+        "añadir el checklist completo del ticket a la respuesta."
+    ),
 )
 def get_ticket(
     ticket: TicketDep,
     subtask_service: Annotated[SubtaskService, Depends(get_subtask_service)],
-    include: Annotated[Literal["subtasks"] | None, Query()] = None,
+    include: Annotated[
+        Literal["subtasks"] | None,
+        Query(
+            description="Incluye las subtareas del ticket cuando vale `subtasks`.",
+            examples=["subtasks"],
+        ),
+    ] = None,
 ) -> TicketRead:
     """Return a ticket by id, optionally including its subtasks."""
     result = TicketRead.model_validate(ticket)
@@ -91,8 +106,12 @@ def get_ticket(
 @router.patch(
     "/{ticket_id}",
     response_model=TicketRead,
-    responses=NOT_FOUND_RESPONSES | CONFLICT_RESPONSES,
-    summary="Update ticket",
+    summary="Actualizar ticket",
+    description=(
+        "Actualiza parcialmente un ticket. Solo se modifican los campos "
+        "enviados. No se puede pasar a `done` mientras existan subtareas "
+        "pendientes; en ese caso responde `409`."
+    ),
 )
 def update_ticket(
     ticket: TicketDep,
@@ -106,8 +125,11 @@ def update_ticket(
 @router.delete(
     "/{ticket_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    responses=NOT_FOUND_RESPONSES,
-    summary="Delete ticket",
+    summary="Eliminar ticket",
+    description=(
+        "Elimina un ticket y todas sus subtareas. La operación es "
+        "irreversible y responde `204` sin cuerpo."
+    ),
 )
 def delete_ticket(
     ticket: TicketDep,
@@ -115,64 +137,3 @@ def delete_ticket(
 ) -> None:
     """Delete a ticket and its subtasks."""
     service.delete(ticket.id)
-
-
-@router.get(
-    "/{ticket_id}/subtasks",
-    response_model=list[SubtaskRead],
-    responses=NOT_FOUND_RESPONSES,
-    summary="List ticket subtasks",
-)
-def list_ticket_subtasks(
-    ticket: TicketDep,
-    service: Annotated[SubtaskService, Depends(get_subtask_service)],
-) -> list[SubtaskRead]:
-    """Return the ticket subtasks ordered by position."""
-    return [SubtaskRead.model_validate(subtask) for subtask in service.list(ticket.id)]
-
-
-@router.post(
-    "/{ticket_id}/subtasks",
-    response_model=SubtaskRead,
-    status_code=status.HTTP_201_CREATED,
-    responses=NOT_FOUND_RESPONSES,
-    summary="Create ticket subtask",
-)
-def create_ticket_subtask(
-    ticket: TicketDep,
-    payload: SubtaskCreate,
-    service: Annotated[SubtaskService, Depends(get_subtask_service)],
-) -> SubtaskRead:
-    """Append a subtask to the ticket checklist."""
-    return SubtaskRead.model_validate(service.create(ticket.id, payload))
-
-
-@router.patch(
-    "/{ticket_id}/subtasks/{subtask_id}",
-    response_model=SubtaskRead,
-    responses=NOT_FOUND_RESPONSES,
-    summary="Update ticket subtask",
-)
-def update_ticket_subtask(
-    subtask: SubtaskDep,
-    payload: SubtaskUpdate,
-    service: Annotated[SubtaskService, Depends(get_subtask_service)],
-) -> SubtaskRead:
-    """Rename or mark a ticket subtask."""
-    return SubtaskRead.model_validate(
-        service.update(subtask.ticket_id, subtask.id, payload)
-    )
-
-
-@router.delete(
-    "/{ticket_id}/subtasks/{subtask_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    responses=NOT_FOUND_RESPONSES,
-    summary="Delete ticket subtask",
-)
-def delete_ticket_subtask(
-    subtask: SubtaskDep,
-    service: Annotated[SubtaskService, Depends(get_subtask_service)],
-) -> None:
-    """Delete a ticket subtask and reorder the remaining positions."""
-    service.delete(subtask.ticket_id, subtask.id)

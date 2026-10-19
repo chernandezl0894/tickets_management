@@ -6,9 +6,9 @@ A service to centralize tickets, requirements, and issues from multiple projects
 and platforms in a single place, with prioritization, subtasks, and reminders.
 It is built with **FastAPI** and developed in phases.
 
-> **Status:** skeleton under construction. Configuration, the Docker stack, and
-> tooling are ready; there is still no business logic or real database
-> connection.
+> **Status:** API in active development. Projects, tickets, and subtasks are
+> available; persistence is still in memory, and authentication and reminders
+> are pending.
 
 ## Requirements
 
@@ -50,6 +50,9 @@ make run
 Available at:
 
 - Docs: <http://127.0.0.1:8000/docs>
+- ReDoc: <http://127.0.0.1:8000/redoc>
+- OpenAPI schema: <http://127.0.0.1:8000/openapi.json>
+- Exported schema: `docs/openapi.json` (regenerate with `make openapi`)
 - Health check: <http://127.0.0.1:8000/health>
 - Root: <http://127.0.0.1:8000/>
 
@@ -67,6 +70,7 @@ Run `make` with no arguments to see the help.
 | `make test` | Run the tests |
 | `make test-cov` | Run the tests with coverage |
 | `make check` | `lint` + `typecheck` + `test` (what CI will run) |
+| `make openapi` | Export the OpenAPI schema to `docs/openapi.json` |
 | `make up` | Start the Docker Compose stack |
 | `make down` | Stop the stack (keeps volumes) |
 | `make logs` | Follow Docker Compose logs |
@@ -105,6 +109,7 @@ src/tickets_management/
 tests/
 ├── unit/
 └── integration/
-docs/                   # scope, toolchain, and structure
+scripts/                # developer utilities (OpenAPI export)
+docs/                   # scope, toolchain, structure, and openapi.json
 alembic/                # migrations (not configured yet)
 ```
