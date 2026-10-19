@@ -44,6 +44,12 @@ The package uses a `src/` layout and is only importable after `uv sync`.
   `src/tickets_management/py.typed`. Keep the `# pyright: ignore[reportCallIssue]`
   on `Settings()`; mypy does not need it.
 
+## OpenCode
+- `opencode.jsonc` sets the project default model
+  (`opencode/deepseek-v4.1-flash-free`) and asks before `git push` via
+  `permissions` (`shell` / `git push *` / `ask`). V2 uses `permissions`,
+  `shell`, and `subagent` (not `permission`, `bash`, `task`).
+
 ## Commits
 All commits MUST follow Conventional Commits and Semantic Release:
 `<type>(<scope>): <description>` in imperative mood. Types: `feat`, `fix`,
