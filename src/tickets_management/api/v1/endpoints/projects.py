@@ -3,10 +3,9 @@
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from tickets_management.api.deps import get_project_service
-from tickets_management.repositories.errors import ConflictError, NotFoundError
 from tickets_management.schemas.project import (
     ProjectCreate,
     ProjectList,
@@ -60,14 +59,7 @@ def create_project(
     service: Annotated[ProjectService, Depends(get_project_service)],
 ) -> ProjectRead:
     """Create a project, rejecting an already used slug."""
-    try:
-        project = service.create(payload)
-    except ConflictError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
-    return ProjectRead.model_validate(project)
+    return ProjectRead.model_validate(service.create(payload))
 
 
 @router.get(
@@ -81,14 +73,7 @@ def get_project(
     service: Annotated[ProjectService, Depends(get_project_service)],
 ) -> ProjectRead:
     """Return a project by id."""
-    try:
-        project = service.get(project_id)
-    except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    return ProjectRead.model_validate(project)
+    return ProjectRead.model_validate(service.get(project_id))
 
 
 @router.patch(
@@ -103,19 +88,7 @@ def update_project(
     service: Annotated[ProjectService, Depends(get_project_service)],
 ) -> ProjectRead:
     """Partially update a project."""
-    try:
-        project = service.update(project_id, payload)
-    except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    except ConflictError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
-    return ProjectRead.model_validate(project)
+    return ProjectRead.model_validate(service.update(project_id, payload))
 
 
 @router.delete(
@@ -129,10 +102,4 @@ def delete_project(
     service: Annotated[ProjectService, Depends(get_project_service)],
 ) -> None:
     """Delete a project and its tickets and subtasks."""
-    try:
-        service.delete(project_id)
-    except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+    service.delete(project_id)

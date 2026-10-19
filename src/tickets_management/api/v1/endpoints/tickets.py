@@ -3,11 +3,10 @@
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from tickets_management.api.deps import get_subtask_service, get_ticket_service
 from tickets_management.domain.enum import Priority, TicketStatus, TicketType
-from tickets_management.repositories.errors import ConflictError, NotFoundError
 from tickets_management.schemas.subtask import (
     SubtaskCreate,
     SubtaskRead,
@@ -64,19 +63,7 @@ def create_ticket(
     service: Annotated[TicketService, Depends(get_ticket_service)],
 ) -> TicketRead:
     """Create a ticket in an existing, active project."""
-    try:
-        ticket = service.create(payload)
-    except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    except ConflictError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
-    return TicketRead.model_validate(ticket)
+    return TicketRead.model_validate(service.create(payload))
 
 
 @router.get(
@@ -92,21 +79,13 @@ def get_ticket(
     include: Annotated[Literal["subtasks"] | None, Query()] = None,
 ) -> TicketRead:
     """Return a ticket by id, optionally including its subtasks."""
-    try:
-        ticket = service.get(ticket_id)
-    except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-
-    result = TicketRead.model_validate(ticket)
+    ticket = TicketRead.model_validate(service.get(ticket_id))
     if include == "subtasks":
-        result.subtasks = [
+        ticket.subtasks = [
             SubtaskRead.model_validate(subtask)
             for subtask in subtask_service.list(ticket_id)
         ]
-    return result
+    return ticket
 
 
 @router.patch(
@@ -121,19 +100,7 @@ def update_ticket(
     service: Annotated[TicketService, Depends(get_ticket_service)],
 ) -> TicketRead:
     """Partially update a ticket, enforcing the status transitions."""
-    try:
-        ticket = service.update(ticket_id, payload)
-    except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    except ConflictError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
-    return TicketRead.model_validate(ticket)
+    return TicketRead.model_validate(service.update(ticket_id, payload))
 
 
 @router.delete(
@@ -147,13 +114,7 @@ def delete_ticket(
     service: Annotated[TicketService, Depends(get_ticket_service)],
 ) -> None:
     """Delete a ticket and its subtasks."""
-    try:
-        service.delete(ticket_id)
-    except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+    service.delete(ticket_id)
 
 
 @router.get(
@@ -167,14 +128,7 @@ def list_ticket_subtasks(
     service: Annotated[SubtaskService, Depends(get_subtask_service)],
 ) -> list[SubtaskRead]:
     """Return the ticket subtasks ordered by position."""
-    try:
-        subtasks = service.list(ticket_id)
-    except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    return [SubtaskRead.model_validate(subtask) for subtask in subtasks]
+    return [SubtaskRead.model_validate(subtask) for subtask in service.list(ticket_id)]
 
 
 @router.post(
@@ -190,14 +144,7 @@ def create_ticket_subtask(
     service: Annotated[SubtaskService, Depends(get_subtask_service)],
 ) -> SubtaskRead:
     """Append a subtask to the ticket checklist."""
-    try:
-        subtask = service.create(ticket_id, payload)
-    except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    return SubtaskRead.model_validate(subtask)
+    return SubtaskRead.model_validate(service.create(ticket_id, payload))
 
 
 @router.patch(
@@ -213,14 +160,7 @@ def update_ticket_subtask(
     service: Annotated[SubtaskService, Depends(get_subtask_service)],
 ) -> SubtaskRead:
     """Rename or mark a ticket subtask."""
-    try:
-        subtask = service.update(ticket_id, subtask_id, payload)
-    except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    return SubtaskRead.model_validate(subtask)
+    return SubtaskRead.model_validate(service.update(ticket_id, subtask_id, payload))
 
 
 @router.delete(
@@ -235,10 +175,4 @@ def delete_ticket_subtask(
     service: Annotated[SubtaskService, Depends(get_subtask_service)],
 ) -> None:
     """Delete a ticket subtask and reorder the remaining positions."""
-    try:
-        service.delete(ticket_id, subtask_id)
-    except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+    service.delete(ticket_id, subtask_id)

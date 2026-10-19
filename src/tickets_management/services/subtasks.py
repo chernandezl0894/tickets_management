@@ -4,8 +4,8 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
+from tickets_management.core.errors import NotFoundError
 from tickets_management.domain.models import Subtask
-from tickets_management.repositories.errors import NotFoundError
 from tickets_management.repositories.protocol import (
     SubtaskRepository,
     TicketRepository,

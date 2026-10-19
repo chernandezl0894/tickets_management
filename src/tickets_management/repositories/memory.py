@@ -8,8 +8,8 @@ from copy import deepcopy
 from threading import Lock
 from uuid import UUID
 
+from tickets_management.core.errors import ConflictError, NotFoundError
 from tickets_management.domain.models import BaseEntity, Project, Subtask, Ticket
-from tickets_management.repositories.errors import ConflictError, NotFoundError
 from tickets_management.repositories.protocol import (
     ProjectRepository,
     SubtaskRepository,

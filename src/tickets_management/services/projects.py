@@ -4,8 +4,8 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
+from tickets_management.core.errors import ConflictError
 from tickets_management.domain.models import Project
-from tickets_management.repositories.errors import ConflictError
 from tickets_management.repositories.protocol import (
     ProjectRepository,
     SubtaskRepository,
