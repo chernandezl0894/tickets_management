@@ -56,3 +56,10 @@ class ProjectRead(Schema):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+
+class ProjectList(Schema):
+    """Paginated list of projects."""
+
+    items: list[ProjectRead]
+    total: int
