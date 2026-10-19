@@ -7,6 +7,7 @@ from fastapi import Depends
 
 from tickets_management.repositories.memory import InMemoryStore
 from tickets_management.services.projects import ProjectService
+from tickets_management.services.subtasks import SubtaskService
 from tickets_management.services.tickets import TicketService
 
 
@@ -28,3 +29,10 @@ def get_ticket_service(
 ) -> TicketService:
     """Build the ticket service from the current store."""
     return TicketService(store.tickets, store.projects, store.subtasks)
+
+
+def get_subtask_service(
+    store: Annotated[InMemoryStore, Depends(get_store)],
+) -> SubtaskService:
+    """Build the subtask service from the current store."""
+    return SubtaskService(store.subtasks, store.tickets)

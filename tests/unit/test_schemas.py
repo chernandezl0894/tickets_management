@@ -31,7 +31,7 @@ def _build_app() -> FastAPI:
 
     @app.post("/subtasks")
     def create_subtask(payload: SubtaskCreate) -> dict[str, str]:
-        return {"ticket_id": str(payload.ticket_id)}
+        return {"title": payload.title}
 
     return app
 
@@ -152,6 +152,7 @@ def test_ticket_example_is_exposed_in_openapi() -> None:
                 "due_at",
                 "created_at",
                 "updated_at",
+                "subtasks",
             },
         ),
         (

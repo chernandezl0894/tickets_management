@@ -7,6 +7,7 @@ from pydantic import ConfigDict, field_validator
 
 from tickets_management.domain.enum import Priority, TicketStatus, TicketType
 from tickets_management.schemas.base import OptionalTitledSchema, Schema, TitledSchema
+from tickets_management.schemas.subtask import SubtaskRead
 
 DUE_AT_PAST_MESSAGE = "debe ser una fecha futura"
 
@@ -86,3 +87,4 @@ class TicketRead(Schema):
     due_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    subtasks: list[SubtaskRead] | None = None
