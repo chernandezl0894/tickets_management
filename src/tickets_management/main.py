@@ -5,6 +5,7 @@ Creates the FastAPI instance and registers the API routes.
 
 from fastapi import FastAPI, Request
 
+from tickets_management.api.v1.router import router as v1_router
 from tickets_management.core.config import get_settings
 
 settings = get_settings()
@@ -13,6 +14,8 @@ app = FastAPI(
     title="Tickets Management API",
     version="0.0.1",
 )
+
+app.include_router(v1_router, prefix="/api")
 
 
 @app.get("/", tags=["root"])
