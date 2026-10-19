@@ -40,6 +40,9 @@ The package uses a `src/` layout and is only importable after `uv sync`.
   `Settings()` type-checks without a `# type: ignore`.
 - Drivers installed: `psycopg[binary]` (URL scheme `postgresql+psycopg`) and
   `redis`; no DB/Redis connection logic exists yet.
+- Editor type checking: `[tool.pyright]` (strict, `extraPaths = ["src"]`) plus
+  `src/tickets_management/py.typed`. Keep the `# pyright: ignore[reportCallIssue]`
+  on `Settings()`; mypy does not need it.
 
 ## Commits
 All commits MUST follow Conventional Commits and Semantic Release:

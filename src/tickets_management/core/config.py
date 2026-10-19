@@ -69,6 +69,6 @@ def get_settings() -> Settings:
     """Return a cached (singleton) Settings instance."""
     try:
         # Required fields are populated from the environment.
-        return Settings()
+        return Settings()  # pyright: ignore[reportCallIssue]
     except ValidationError as exc:
         raise RuntimeError(_format_config_error(exc)) from exc

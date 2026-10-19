@@ -54,3 +54,9 @@ known-first-party = ["tickets_management"]
 python_version = "3.14"
 strict = true
 plugins = ["pydantic.mypy"]
+
+[tool.pyright]
+include = ["src", "tests"]
+extraPaths = ["src"]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
