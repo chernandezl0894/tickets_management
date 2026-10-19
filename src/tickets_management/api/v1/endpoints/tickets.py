@@ -11,6 +11,7 @@ from tickets_management.api.deps import (
     get_ticket_service,
 )
 from tickets_management.core.openapi import problem_responses
+from tickets_management.schemas.history import TicketHistoryRead
 from tickets_management.schemas.subtask import SubtaskRead
 from tickets_management.schemas.ticket import TicketCreate, TicketRead, TicketUpdate
 from tickets_management.services.subtasks import SubtaskService
@@ -33,8 +34,9 @@ router = APIRouter(
     response_model=list[TicketRead],
     summary="Listar tickets",
     description=(
-        "Devuelve los tickets que cumplen los filtros opcionales. Los "
-        "resultados se ordenan por prioridad descendente (`high`, `medium`, "
+        "Devuelve los tickets que cumplen los filtros opcionales. Usa `q` "
+        "para buscar, sin distinguir mayúsculas, en el título y la descripción. "
+        "Los resultados se ordenan por prioridad descendente (`high`, `medium`, "
         "`low`) y, dentro de cada prioridad, por fecha límite ascendente. Los "
         "tickets sin fecha límite se colocan al final."
     ),
@@ -49,6 +51,7 @@ def list_tickets(
         ticket_type=filters.type,
         priority=filters.priority,
         status=filters.status,
+        query=filters.q,
     )
     return [TicketRead.model_validate(ticket) for ticket in tickets]
 
@@ -101,6 +104,28 @@ def get_ticket(
             for subtask in subtask_service.list(ticket.id)
         ]
     return result
+
+
+@router.get(
+    "/{ticket_id}/history",
+    response_model=list[TicketHistoryRead],
+    summary="Consultar historial del ticket",
+    description=(
+        "Devuelve los cambios registrados sobre un ticket en orden "
+        "cronológico. Cada entrada indica el campo modificado, el valor "
+        "anterior, el valor nuevo y el momento del cambio. Se registran, entre "
+        "otros, los cambios de estado, prioridad y fecha límite."
+    ),
+)
+def get_ticket_history(
+    ticket: TicketDep,
+    service: Annotated[TicketService, Depends(get_ticket_service)],
+) -> list[TicketHistoryRead]:
+    """Return the chronological field changes of a ticket."""
+    return [
+        TicketHistoryRead.model_validate(change)
+        for change in service.get_history(ticket.id)
+    ]
 
 
 @router.patch(

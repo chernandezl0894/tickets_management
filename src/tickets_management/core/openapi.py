@@ -18,6 +18,9 @@ tickets, prioridades, fechas límite y subtareas desde un único lugar.
 
 - CRUD de **proyectos** con control de `slug` único y borrado en cascada.
 - CRUD de **tickets** con filtros, prioridades y reglas de transición de estado.
+- **Búsqueda** de tickets por texto en título y descripción con el parámetro `q`.
+- **Historial** cronológico de los cambios de cada ticket.
+- **Resumen** por proyecto con contadores por estado, prioridad y subtareas pendientes.
 - **Subtareas** anidadas con posición automática y reordenamiento.
 - Errores consistentes basados en **RFC 9457** con el media type
   `application/problem+json`.

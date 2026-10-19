@@ -83,6 +83,17 @@ class Subtask(BaseEntity):
 
 
 @dataclass(kw_only=True)
+class TicketHistory(BaseEntity):
+    """An immutable record of a change made to a ticket field."""
+
+    ticket_id: UUID
+    field: str
+    old: str | None
+    new: str | None
+    changed_at: datetime
+
+
+@dataclass(kw_only=True)
 class Reminder(BaseEntity):
     """A scheduled notification about a ticket."""
 

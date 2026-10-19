@@ -136,3 +136,38 @@ class ProjectList(Schema):
 
     items: list[ProjectRead] = Field(description="Proyectos de la página actual.")
     total: int = Field(description="Número total de proyectos registrados.")
+
+
+class ProjectSummary(Schema):
+    """Ticket counters for one project."""
+
+    total: int = Field(description="Número total de tickets del proyecto.")
+    by_status: dict[str, int] = Field(
+        description="Número de tickets agrupados por estado.",
+        examples=[{"open": 2, "in_progress": 1, "done": 3}],
+    )
+    by_priority: dict[str, int] = Field(
+        description="Número de tickets agrupados por prioridad.",
+        examples=[{"high": 2, "medium": 3, "low": 1}],
+    )
+    pending_subtasks: int = Field(
+        description="Subtareas sin completar de todos los tickets del proyecto.",
+        examples=[4],
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "total": 6,
+                "by_status": {
+                    "open": 2,
+                    "in_progress": 1,
+                    "blocked": 0,
+                    "done": 3,
+                    "closed": 0,
+                },
+                "by_priority": {"high": 2, "medium": 3, "low": 1},
+                "pending_subtasks": 4,
+            }
+        }
+    )

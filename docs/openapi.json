@@ -3,7 +3,7 @@
   "info": {
     "title": "Tickets Management API",
     "summary": "API REST para gestionar proyectos, tickets y subtareas.",
-    "description": "\n## Descripción\n\nEsta API centraliza proyectos de distintas plataformas y permite gestionar sus\ntickets, prioridades, fechas límite y subtareas desde un único lugar.\n\n### Capacidades principales\n\n- CRUD de **proyectos** con control de `slug` único y borrado en cascada.\n- CRUD de **tickets** con filtros, prioridades y reglas de transición de estado.\n- **Subtareas** anidadas con posición automática y reordenamiento.\n- Errores consistentes basados en **RFC 9457** con el media type\n  `application/problem+json`.\n\n### Códigos de error\n\n| Código | Significado |\n|---|---|\n| `404` | El recurso solicitado no existe. |\n| `409` | La operación entra en conflicto con el estado actual. |\n| `422` | La solicitud contiene parámetros o campos inválidos. |\n| `500` | Ocurrió un error interno inesperado. |\n\n### Documentación interactiva\n\n- [Swagger UI](/docs)\n- [ReDoc](/redoc)\n- [Esquema OpenAPI](/openapi.json)\n",
+    "description": "\n## Descripción\n\nEsta API centraliza proyectos de distintas plataformas y permite gestionar sus\ntickets, prioridades, fechas límite y subtareas desde un único lugar.\n\n### Capacidades principales\n\n- CRUD de **proyectos** con control de `slug` único y borrado en cascada.\n- CRUD de **tickets** con filtros, prioridades y reglas de transición de estado.\n- **Búsqueda** de tickets por texto en título y descripción con el parámetro `q`.\n- **Historial** cronológico de los cambios de cada ticket.\n- **Resumen** por proyecto con contadores por estado, prioridad y subtareas pendientes.\n- **Subtareas** anidadas con posición automática y reordenamiento.\n- Errores consistentes basados en **RFC 9457** con el media type\n  `application/problem+json`.\n\n### Códigos de error\n\n| Código | Significado |\n|---|---|\n| `404` | El recurso solicitado no existe. |\n| `409` | La operación entra en conflicto con el estado actual. |\n| `422` | La solicitud contiene parámetros o campos inválidos. |\n| `500` | Ocurrió un error interno inesperado. |\n\n### Documentación interactiva\n\n- [Swagger UI](/docs)\n- [ReDoc](/redoc)\n- [Esquema OpenAPI](/openapi.json)\n",
     "contact": {
       "name": "Cristhian Hernandez",
       "url": "https://github.com/chernandezl0894/tickets_management"
@@ -393,13 +393,87 @@
         }
       }
     },
+    "/api/v1/projects/{project_id}/summary": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Resumir tickets del proyecto",
+        "description": "Devuelve el número total de tickets, los contadores agrupados por estado y prioridad, y la cantidad de subtareas pendientes de todos los tickets del proyecto. Responde `404` si el proyecto no existe.",
+        "operationId": "get_project_summary_api_v1_projects__project_id__summary_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró el proyecto solicitado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe un proyecto con el slug indicado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tickets": {
       "get": {
         "tags": [
           "tickets"
         ],
         "summary": "Listar tickets",
-        "description": "Devuelve los tickets que cumplen los filtros opcionales. Los resultados se ordenan por prioridad descendente (`high`, `medium`, `low`) y, dentro de cada prioridad, por fecha límite ascendente. Los tickets sin fecha límite se colocan al final.",
+        "description": "Devuelve los tickets que cumplen los filtros opcionales. Usa `q` para buscar, sin distinguir mayúsculas, en el título y la descripción. Los resultados se ordenan por prioridad descendente (`high`, `medium`, `low`) y, dentro de cada prioridad, por fecha límite ascendente. Los tickets sin fecha límite se colocan al final.",
         "operationId": "list_tickets_api_v1_tickets_get",
         "parameters": [
           {
@@ -466,6 +540,27 @@
               ],
               "title": "Status"
             }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Texto libre para buscar, sin distinguir mayúsculas, en el título y la descripción de los tickets.",
+              "examples": [
+                "login"
+              ],
+              "title": "Q"
+            },
+            "description": "Texto libre para buscar, sin distinguir mayúsculas, en el título y la descripción de los tickets."
           }
         ],
         "responses": {
@@ -795,6 +890,84 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "404": {
+            "description": "No se encontró el ticket o el proyecto indicado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La operación infringe una regla de negocio del ticket.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La solicitud contiene parámetros o campos inválidos.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocurrió un error interno inesperado.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/history": {
+      "get": {
+        "tags": [
+          "tickets"
+        ],
+        "summary": "Consultar historial del ticket",
+        "description": "Devuelve los cambios registrados sobre un ticket en orden cronológico. Cada entrada indica el campo modificado, el valor anterior, el valor nuevo y el momento del cambio. Se registran, entre otros, los cambios de estado, prioridad y fecha límite.",
+        "operationId": "get_ticket_history_api_v1_tickets__ticket_id__history_get",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TicketHistoryRead"
+                  },
+                  "title": "Response Get Ticket History Api V1 Tickets  Ticket Id  History Get"
+                }
+              }
+            }
           },
           "404": {
             "description": "No se encontró el ticket o el proyecto indicado.",
@@ -1537,6 +1710,78 @@
           "updated_at": "2026-01-01T12:00:00Z"
         }
       },
+      "ProjectSummary": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Número total de tickets del proyecto."
+          },
+          "by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Status",
+            "description": "Número de tickets agrupados por estado.",
+            "examples": [
+              {
+                "done": 3,
+                "in_progress": 1,
+                "open": 2
+              }
+            ]
+          },
+          "by_priority": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Priority",
+            "description": "Número de tickets agrupados por prioridad.",
+            "examples": [
+              {
+                "high": 2,
+                "low": 1,
+                "medium": 3
+              }
+            ]
+          },
+          "pending_subtasks": {
+            "type": "integer",
+            "title": "Pending Subtasks",
+            "description": "Subtareas sin completar de todos los tickets del proyecto.",
+            "examples": [
+              4
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "by_status",
+          "by_priority",
+          "pending_subtasks"
+        ],
+        "title": "ProjectSummary",
+        "description": "Ticket counters for one project.",
+        "example": {
+          "by_priority": {
+            "high": 2,
+            "low": 1,
+            "medium": 3
+          },
+          "by_status": {
+            "blocked": 0,
+            "closed": 0,
+            "done": 3,
+            "in_progress": 1,
+            "open": 2
+          },
+          "pending_subtasks": 4,
+          "total": 6
+        }
+      },
       "ProjectUpdate": {
         "properties": {
           "name": {
@@ -1883,6 +2128,72 @@
           "status": "open",
           "title": "Implementar inicio de sesión con OTP",
           "type": "feature"
+        }
+      },
+      "TicketHistoryRead": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field",
+            "description": "Nombre del campo modificado.",
+            "examples": [
+              "status"
+            ]
+          },
+          "old": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old",
+            "description": "Valor anterior, serializado como texto.",
+            "examples": [
+              "open"
+            ]
+          },
+          "new": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New",
+            "description": "Valor nuevo, serializado como texto.",
+            "examples": [
+              "in_progress"
+            ]
+          },
+          "changed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Changed At",
+            "description": "Momento del cambio en UTC.",
+            "examples": [
+              "2026-01-02T08:30:00Z"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "old",
+          "new",
+          "changed_at"
+        ],
+        "title": "TicketHistoryRead",
+        "description": "One field change recorded for a ticket.",
+        "example": {
+          "changed_at": "2026-01-02T08:30:00Z",
+          "field": "status",
+          "new": "in_progress",
+          "old": "open"
         }
       },
       "TicketRead": {

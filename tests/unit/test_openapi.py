@@ -100,6 +100,19 @@ def test_openapi_endpoint_publishes_problem_media_type(
     assert PROBLEM_MEDIA_TYPE in operation["responses"]["404"]["content"]
 
 
+def test_extended_crud_operations_are_documented(schema: dict[str, Any]) -> None:
+    """Search, history, and summary are part of the public contract."""
+    paths = schema["paths"]
+    ticket_parameters = paths["/api/v1/tickets"]["get"]["parameters"]
+    components = schema["components"]["schemas"]
+
+    assert any(parameter["name"] == "q" for parameter in ticket_parameters)
+    assert "/api/v1/tickets/{ticket_id}/history" in paths
+    assert "/api/v1/projects/{project_id}/summary" in paths
+    assert "TicketHistoryRead" in components
+    assert "ProjectSummary" in components
+
+
 def test_swagger_and_redoc_render(client: TestClient) -> None:
     """Both interactive documentation pages are available."""
     swagger = client.get("/docs")

@@ -11,6 +11,7 @@ from tickets_management.schemas.project import (
     ProjectCreate,
     ProjectList,
     ProjectRead,
+    ProjectSummary,
     ProjectUpdate,
 )
 from tickets_management.services.projects import ProjectService
@@ -88,6 +89,24 @@ def get_project(
 ) -> ProjectRead:
     """Return a project by id."""
     return ProjectRead.model_validate(service.get(project_id))
+
+
+@router.get(
+    "/{project_id}/summary",
+    response_model=ProjectSummary,
+    summary="Resumir tickets del proyecto",
+    description=(
+        "Devuelve el número total de tickets, los contadores agrupados por "
+        "estado y prioridad, y la cantidad de subtareas pendientes de todos "
+        "los tickets del proyecto. Responde `404` si el proyecto no existe."
+    ),
+)
+def get_project_summary(
+    project_id: UUID,
+    service: Annotated[ProjectService, Depends(get_project_service)],
+) -> ProjectSummary:
+    """Return ticket counters and pending subtasks for a project."""
+    return service.summary(project_id)
 
 
 @router.patch(

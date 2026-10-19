@@ -9,10 +9,17 @@ from threading import Lock
 from uuid import UUID
 
 from tickets_management.core.errors import ConflictError, NotFoundError
-from tickets_management.domain.models import BaseEntity, Project, Subtask, Ticket
+from tickets_management.domain.models import (
+    BaseEntity,
+    Project,
+    Subtask,
+    Ticket,
+    TicketHistory,
+)
 from tickets_management.repositories.protocol import (
     ProjectRepository,
     SubtaskRepository,
+    TicketHistoryRepository,
     TicketRepository,
 )
 
@@ -72,9 +79,52 @@ class InMemoryProjectRepository(_InMemoryRepository[Project]):
 class InMemoryTicketRepository(_InMemoryRepository[Ticket]):
     """In-memory implementation of ``TicketRepository``."""
 
+    def search(self, query: str) -> list[Ticket]:
+        """Return tickets matching ``query`` in title or description."""
+        normalized = query.casefold()
+        with self._lock:
+            return [
+                deepcopy(ticket)
+                for ticket in self._items.values()
+                if normalized in ticket.title.casefold()
+                or normalized in ticket.description.casefold()
+            ]
+
+    def list_by_project(self, project_id: UUID) -> list[Ticket]:
+        """Return the tickets that belong to ``project_id``."""
+        with self._lock:
+            return [
+                deepcopy(ticket)
+                for ticket in self._items.values()
+                if ticket.project_id == project_id
+            ]
+
 
 class InMemorySubtaskRepository(_InMemoryRepository[Subtask]):
     """In-memory implementation of ``SubtaskRepository``."""
+
+    def count_pending_by_ticket_ids(self, ticket_ids: set[UUID]) -> int:
+        """Count unfinished subtasks belonging to any of ``ticket_ids``."""
+        with self._lock:
+            return sum(
+                1
+                for subtask in self._items.values()
+                if subtask.ticket_id in ticket_ids and not subtask.is_done
+            )
+
+
+class InMemoryTicketHistoryRepository(_InMemoryRepository[TicketHistory]):
+    """In-memory implementation of ``TicketHistoryRepository``."""
+
+    def list_for_ticket(self, ticket_id: UUID) -> list[TicketHistory]:
+        """Return the changes recorded for ``ticket_id`` in chronological order."""
+        with self._lock:
+            changes = [
+                deepcopy(change)
+                for change in self._items.values()
+                if change.ticket_id == ticket_id
+            ]
+        return sorted(changes, key=lambda change: change.changed_at)
 
 
 class InMemoryStore:
@@ -85,6 +135,7 @@ class InMemoryStore:
         self._projects: dict[UUID, Project] = {}
         self._tickets: dict[UUID, Ticket] = {}
         self._subtasks: dict[UUID, Subtask] = {}
+        self._history: dict[UUID, TicketHistory] = {}
 
         self.projects: ProjectRepository = InMemoryProjectRepository(
             self._projects, self._lock
@@ -94,4 +145,7 @@ class InMemoryStore:
         )
         self.subtasks: SubtaskRepository = InMemorySubtaskRepository(
             self._subtasks, self._lock
+        )
+        self.history: TicketHistoryRepository = InMemoryTicketHistoryRepository(
+            self._history, self._lock
         )

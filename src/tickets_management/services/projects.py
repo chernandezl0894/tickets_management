@@ -5,13 +5,19 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from tickets_management.core.errors import ConflictError
+from tickets_management.domain.enum import Priority, TicketStatus
 from tickets_management.domain.models import Project
 from tickets_management.repositories.protocol import (
     ProjectRepository,
     SubtaskRepository,
+    TicketHistoryRepository,
     TicketRepository,
 )
-from tickets_management.schemas.project import ProjectCreate, ProjectUpdate
+from tickets_management.schemas.project import (
+    ProjectCreate,
+    ProjectSummary,
+    ProjectUpdate,
+)
 
 
 class ProjectService:
@@ -22,10 +28,12 @@ class ProjectService:
         projects: ProjectRepository,
         tickets: TicketRepository,
         subtasks: SubtaskRepository,
+        history: TicketHistoryRepository,
     ) -> None:
         self._projects = projects
         self._tickets = tickets
         self._subtasks = subtasks
+        self._history = history
 
     def list(self, *, limit: int, offset: int) -> tuple[list[Project], int]:
         """Return one page of projects and the total number of projects."""
@@ -35,6 +43,27 @@ class ProjectService:
     def get(self, project_id: UUID) -> Project:
         """Return a project or raise ``NotFoundError``."""
         return self._projects.get(project_id)
+
+    def summary(self, project_id: UUID) -> ProjectSummary:
+        """Return ticket counters and pending subtasks for a project."""
+        self._projects.get(project_id)
+        tickets = self._tickets.list_by_project(project_id)
+
+        by_status = {status.value: 0 for status in TicketStatus}
+        by_priority = {priority.value: 0 for priority in Priority}
+        for ticket in tickets:
+            by_status[ticket.status.value] += 1
+            by_priority[ticket.priority.value] += 1
+
+        pending_subtasks = self._subtasks.count_pending_by_ticket_ids(
+            {ticket.id for ticket in tickets}
+        )
+        return ProjectSummary(
+            total=len(tickets),
+            by_status=by_status,
+            by_priority=by_priority,
+            pending_subtasks=pending_subtasks,
+        )
 
     def create(self, payload: ProjectCreate) -> Project:
         """Create a project if its slug is still available."""
@@ -69,15 +98,13 @@ class ProjectService:
         """Delete a project together with its tickets and their subtasks."""
         self._projects.get(project_id)
 
-        ticket_ids = {
-            ticket.id
-            for ticket in self._tickets.list()
-            if ticket.project_id == project_id
-        }
+        ticket_ids = {ticket.id for ticket in self._tickets.list_by_project(project_id)}
         for subtask in self._subtasks.list():
             if subtask.ticket_id in ticket_ids:
                 self._subtasks.delete(subtask.id)
         for ticket_id in ticket_ids:
+            for change in self._history.list_for_ticket(ticket_id):
+                self._history.delete(change.id)
             self._tickets.delete(ticket_id)
 
         self._projects.delete(project_id)

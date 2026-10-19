@@ -105,3 +105,66 @@ def test_ticket_and_subtask_repositories_are_available() -> None:
 
     assert tickets.get(ticket.id).title == "Valid ticket title"
     assert subtasks.get(subtask.id).title == "Valid subtask title"
+
+
+def test_ticket_search_checks_title_and_description_case_insensitively() -> None:
+    """The repository search matches both text fields ignoring case."""
+    store = InMemoryStore()
+    project = store.projects.add(_project())
+    title_match = store.tickets.add(
+        Ticket(
+            project_id=project.id,
+            type=TicketType.FEATURE,
+            title="Login flow",
+            description="Add the authentication screen",
+        )
+    )
+    description_match = store.tickets.add(
+        Ticket(
+            project_id=project.id,
+            type=TicketType.FEATURE,
+            title="Session timeout",
+            description="Improve the LOGIN retry behaviour",
+        )
+    )
+    store.tickets.add(
+        Ticket(
+            project_id=project.id,
+            type=TicketType.FEATURE,
+            title="Billing export",
+            description="Download invoices as CSV",
+        )
+    )
+
+    matches = store.tickets.search("LoGiN")
+
+    assert {ticket.id for ticket in matches} == {
+        title_match.id,
+        description_match.id,
+    }
+
+
+def test_pending_subtask_count_is_scoped_to_the_ticket_ids() -> None:
+    """The repository only counts unfinished subtasks for the given tickets."""
+    store = InMemoryStore()
+    project = store.projects.add(_project())
+    first = store.tickets.add(
+        Ticket(
+            project_id=project.id,
+            type=TicketType.FEATURE,
+            title="First ticket",
+        )
+    )
+    second = store.tickets.add(
+        Ticket(
+            project_id=project.id,
+            type=TicketType.FEATURE,
+            title="Second ticket",
+        )
+    )
+    store.subtasks.add(Subtask(ticket_id=first.id, title="Pending", is_done=False))
+    store.subtasks.add(Subtask(ticket_id=first.id, title="Done", is_done=True))
+    store.subtasks.add(Subtask(ticket_id=second.id, title="Other pending"))
+
+    assert store.subtasks.count_pending_by_ticket_ids({first.id}) == 1
+    assert store.subtasks.count_pending_by_ticket_ids({first.id, second.id}) == 2

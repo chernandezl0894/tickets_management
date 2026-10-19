@@ -8,7 +8,13 @@ satisfy these protocols structurally.
 from typing import Protocol
 from uuid import UUID
 
-from tickets_management.domain.models import BaseEntity, Project, Subtask, Ticket
+from tickets_management.domain.models import (
+    BaseEntity,
+    Project,
+    Subtask,
+    Ticket,
+    TicketHistory,
+)
 
 
 class Repository[T: BaseEntity](Protocol):
@@ -42,6 +48,26 @@ class ProjectRepository(Repository[Project], Protocol):
 class TicketRepository(Repository[Ticket], Protocol):
     """Data operations for tickets."""
 
+    def search(self, query: str) -> list[Ticket]:
+        """Return tickets whose title or description contains ``query``."""
+        ...
+
+    def list_by_project(self, project_id: UUID) -> list[Ticket]:
+        """Return the tickets that belong to ``project_id``."""
+        ...
+
 
 class SubtaskRepository(Repository[Subtask], Protocol):
     """Data operations for subtasks."""
+
+    def count_pending_by_ticket_ids(self, ticket_ids: set[UUID]) -> int:
+        """Count unfinished subtasks belonging to any of ``ticket_ids``."""
+        ...
+
+
+class TicketHistoryRepository(Repository[TicketHistory], Protocol):
+    """Data operations for ticket change history."""
+
+    def list_for_ticket(self, ticket_id: UUID) -> list[TicketHistory]:
+        """Return the changes recorded for ``ticket_id`` in chronological order."""
+        ...

@@ -13,6 +13,7 @@ from tickets_management.repositories.memory import InMemoryStore
 from tickets_management.repositories.protocol import (
     ProjectRepository,
     SubtaskRepository,
+    TicketHistoryRepository,
     TicketRepository,
 )
 from tickets_management.services.projects import ProjectService
@@ -41,11 +42,22 @@ class TicketFilter:
         type: Annotated[TicketType | None, Query()] = None,
         priority: Annotated[Priority | None, Query()] = None,
         status: Annotated[TicketStatus | None, Query()] = None,
+        q: Annotated[
+            str | None,
+            Query(
+                description=(
+                    "Texto libre para buscar, sin distinguir mayúsculas, en el "
+                    "título y la descripción de los tickets."
+                ),
+                examples=["login"],
+            ),
+        ] = None,
     ) -> None:
         self.project_id = project_id
         self.type = type
         self.priority = priority
         self.status = status
+        self.q = q
 
 
 @lru_cache
@@ -75,22 +87,31 @@ def get_subtask_repository(
     return store.subtasks
 
 
+def get_history_repository(
+    store: Annotated[InMemoryStore, Depends(get_store)],
+) -> TicketHistoryRepository:
+    """Return the ticket history repository from the current store."""
+    return store.history
+
+
 def get_project_service(
     projects: Annotated[ProjectRepository, Depends(get_project_repository)],
     tickets: Annotated[TicketRepository, Depends(get_ticket_repository)],
     subtasks: Annotated[SubtaskRepository, Depends(get_subtask_repository)],
+    history: Annotated[TicketHistoryRepository, Depends(get_history_repository)],
 ) -> ProjectService:
     """Build the project service from the current repositories."""
-    return ProjectService(projects, tickets, subtasks)
+    return ProjectService(projects, tickets, subtasks, history)
 
 
 def get_ticket_service(
     tickets: Annotated[TicketRepository, Depends(get_ticket_repository)],
     projects: Annotated[ProjectRepository, Depends(get_project_repository)],
     subtasks: Annotated[SubtaskRepository, Depends(get_subtask_repository)],
+    history: Annotated[TicketHistoryRepository, Depends(get_history_repository)],
 ) -> TicketService:
     """Build the ticket service from the current repositories."""
-    return TicketService(tickets, projects, subtasks)
+    return TicketService(tickets, projects, subtasks, history)
 
 
 def get_subtask_service(
