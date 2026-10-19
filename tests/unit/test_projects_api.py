@@ -62,6 +62,16 @@ def test_list_projects_returns_total_and_respects_pagination(
     assert len(second_page.json()["items"]) == 1
 
 
+def test_list_projects_rejects_limit_above_maximum(
+    client: TestClient,
+) -> None:
+    """The pagination dependency validates limit is at most 100."""
+    response = client.get("/api/v1/projects", params={"limit": 500})
+
+    assert response.status_code == 422
+    assert response.json()["errors"][0]["loc"] == ["query", "limit"]
+
+
 def test_get_project_returns_404_when_missing(client: TestClient) -> None:
     """GET /projects/{id} returns 404 for an unknown id."""
     response = client.get(f"/api/v1/projects/{uuid4()}")

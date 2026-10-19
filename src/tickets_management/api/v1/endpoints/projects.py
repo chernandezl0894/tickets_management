@@ -3,9 +3,9 @@
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Response, status
 
-from tickets_management.api.deps import get_project_service
+from tickets_management.api.deps import PaginationDep, get_project_service
 from tickets_management.schemas.project import (
     ProjectCreate,
     ProjectList,
@@ -34,12 +34,14 @@ router = APIRouter(
 @router.get("", response_model=ProjectList, summary="List projects")
 def list_projects(
     response: Response,
+    pagination: PaginationDep,
     service: Annotated[ProjectService, Depends(get_project_service)],
-    limit: Annotated[int, Query(ge=1, le=100)] = 20,
-    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ProjectList:
     """Return one page of projects and the total number of projects."""
-    projects, total = service.list(limit=limit, offset=offset)
+    projects, total = service.list(
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
     response.headers["X-Total-Count"] = str(total)
     return ProjectList(
         items=[ProjectRead.model_validate(project) for project in projects],

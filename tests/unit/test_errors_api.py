@@ -31,6 +31,18 @@ def test_not_found_returns_problem_details(client: TestClient) -> None:
     assert body["instance"] == f"/api/v1/projects/{project_id}"
 
 
+def test_ticket_not_found_returns_problem_details(client: TestClient) -> None:
+    """The ticket resolver dependency returns a 404 problem payload."""
+    ticket_id = uuid4()
+
+    response = client.get(f"/api/v1/tickets/{ticket_id}")
+
+    assert response.status_code == 404
+    body = _assert_problem(response)
+    assert body["status"] == 404
+    assert body["instance"] == f"/api/v1/tickets/{ticket_id}"
+
+
 def test_conflict_returns_problem_details(client: TestClient) -> None:
     """A business conflict returns a 409 problem details payload."""
     payload = {

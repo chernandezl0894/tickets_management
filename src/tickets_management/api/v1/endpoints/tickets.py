@@ -1,12 +1,16 @@
 """Ticket API endpoints."""
 
 from typing import Annotated, Any, Literal
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 
-from tickets_management.api.deps import get_subtask_service, get_ticket_service
-from tickets_management.domain.enum import Priority, TicketStatus, TicketType
+from tickets_management.api.deps import (
+    SubtaskDep,
+    TicketDep,
+    TicketFilterDep,
+    get_subtask_service,
+    get_ticket_service,
+)
 from tickets_management.schemas.subtask import (
     SubtaskCreate,
     SubtaskRead,
@@ -35,18 +39,15 @@ router = APIRouter(
 
 @router.get("", response_model=list[TicketRead], summary="List tickets")
 def list_tickets(
+    filters: TicketFilterDep,
     service: Annotated[TicketService, Depends(get_ticket_service)],
-    project_id: Annotated[UUID | None, Query()] = None,
-    type: Annotated[TicketType | None, Query()] = None,
-    priority: Annotated[Priority | None, Query()] = None,
-    status: Annotated[TicketStatus | None, Query()] = None,
 ) -> list[TicketRead]:
     """Return tickets filtered and ordered by the business rules."""
     tickets = service.list(
-        project_id=project_id,
-        ticket_type=type,
-        priority=priority,
-        status=status,
+        project_id=filters.project_id,
+        ticket_type=filters.type,
+        priority=filters.priority,
+        status=filters.status,
     )
     return [TicketRead.model_validate(ticket) for ticket in tickets]
 
@@ -73,19 +74,18 @@ def create_ticket(
     summary="Get ticket",
 )
 def get_ticket(
-    ticket_id: UUID,
-    service: Annotated[TicketService, Depends(get_ticket_service)],
+    ticket: TicketDep,
     subtask_service: Annotated[SubtaskService, Depends(get_subtask_service)],
     include: Annotated[Literal["subtasks"] | None, Query()] = None,
 ) -> TicketRead:
     """Return a ticket by id, optionally including its subtasks."""
-    ticket = TicketRead.model_validate(service.get(ticket_id))
+    result = TicketRead.model_validate(ticket)
     if include == "subtasks":
-        ticket.subtasks = [
+        result.subtasks = [
             SubtaskRead.model_validate(subtask)
-            for subtask in subtask_service.list(ticket_id)
+            for subtask in subtask_service.list(ticket.id)
         ]
-    return ticket
+    return result
 
 
 @router.patch(
@@ -95,12 +95,12 @@ def get_ticket(
     summary="Update ticket",
 )
 def update_ticket(
-    ticket_id: UUID,
+    ticket: TicketDep,
     payload: TicketUpdate,
     service: Annotated[TicketService, Depends(get_ticket_service)],
 ) -> TicketRead:
     """Partially update a ticket, enforcing the status transitions."""
-    return TicketRead.model_validate(service.update(ticket_id, payload))
+    return TicketRead.model_validate(service.update(ticket.id, payload))
 
 
 @router.delete(
@@ -110,11 +110,11 @@ def update_ticket(
     summary="Delete ticket",
 )
 def delete_ticket(
-    ticket_id: UUID,
+    ticket: TicketDep,
     service: Annotated[TicketService, Depends(get_ticket_service)],
 ) -> None:
     """Delete a ticket and its subtasks."""
-    service.delete(ticket_id)
+    service.delete(ticket.id)
 
 
 @router.get(
@@ -124,11 +124,11 @@ def delete_ticket(
     summary="List ticket subtasks",
 )
 def list_ticket_subtasks(
-    ticket_id: UUID,
+    ticket: TicketDep,
     service: Annotated[SubtaskService, Depends(get_subtask_service)],
 ) -> list[SubtaskRead]:
     """Return the ticket subtasks ordered by position."""
-    return [SubtaskRead.model_validate(subtask) for subtask in service.list(ticket_id)]
+    return [SubtaskRead.model_validate(subtask) for subtask in service.list(ticket.id)]
 
 
 @router.post(
@@ -139,12 +139,12 @@ def list_ticket_subtasks(
     summary="Create ticket subtask",
 )
 def create_ticket_subtask(
-    ticket_id: UUID,
+    ticket: TicketDep,
     payload: SubtaskCreate,
     service: Annotated[SubtaskService, Depends(get_subtask_service)],
 ) -> SubtaskRead:
     """Append a subtask to the ticket checklist."""
-    return SubtaskRead.model_validate(service.create(ticket_id, payload))
+    return SubtaskRead.model_validate(service.create(ticket.id, payload))
 
 
 @router.patch(
@@ -154,13 +154,14 @@ def create_ticket_subtask(
     summary="Update ticket subtask",
 )
 def update_ticket_subtask(
-    ticket_id: UUID,
-    subtask_id: UUID,
+    subtask: SubtaskDep,
     payload: SubtaskUpdate,
     service: Annotated[SubtaskService, Depends(get_subtask_service)],
 ) -> SubtaskRead:
     """Rename or mark a ticket subtask."""
-    return SubtaskRead.model_validate(service.update(ticket_id, subtask_id, payload))
+    return SubtaskRead.model_validate(
+        service.update(subtask.ticket_id, subtask.id, payload)
+    )
 
 
 @router.delete(
@@ -170,9 +171,8 @@ def update_ticket_subtask(
     summary="Delete ticket subtask",
 )
 def delete_ticket_subtask(
-    ticket_id: UUID,
-    subtask_id: UUID,
+    subtask: SubtaskDep,
     service: Annotated[SubtaskService, Depends(get_subtask_service)],
 ) -> None:
     """Delete a ticket subtask and reorder the remaining positions."""
-    service.delete(ticket_id, subtask_id)
+    service.delete(subtask.ticket_id, subtask.id)
