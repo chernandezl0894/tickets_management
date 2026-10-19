@@ -1,109 +1,110 @@
 # Tickets Management
 
-## ¿Qué es el proyecto?
+## What is the project?
 
-Servicio para centralizar los tickets, requerimientos e issues de varios
-proyectos y plataformas en un solo lugar, con priorización, subtareas y
-recordatorios. Está construido con **FastAPI** y se desarrolla por fases.
+A service to centralize tickets, requirements, and issues from multiple projects
+and platforms in a single place, with prioritization, subtasks, and reminders.
+It is built with **FastAPI** and developed in phases.
 
-> **Estado:** esqueleto en construcción. La configuración, el stack Docker y el
-> tooling ya están listos; todavía no hay lógica de negocio ni conexión real a
-> base de datos.
+> **Status:** skeleton under construction. Configuration, the Docker stack, and
+> tooling are ready; there is still no business logic or real database
+> connection.
 
-## Requisitos
+## Requirements
 
-| Herramienta | Versión / uso |
+| Tool | Version / purpose |
 |---|---|
-| Python | 3.14 (fijada en `.python-version`) |
-| [uv](https://docs.astral.sh/uv/) | gestión de dependencias y entorno |
-| Docker + Docker Compose | opcional, para PostgreSQL y Redis locales |
-| `make` | opcional, atajos del `Makefile` |
+| Python | 3.14 (pinned in `.python-version`) |
+| [uv](https://docs.astral.sh/uv/) | dependency and environment management |
+| Docker + Docker Compose | optional, for local PostgreSQL and Redis |
+| `make` | optional, `Makefile` shortcuts |
 
-## Instalación y uso
+## Installation and usage
 
-### Instalar dependencias
+### Install dependencies
 
 ```bash
 make install
 ```
 
-Equivale a `uv sync` + `uv run pre-commit install` (hook de Ruff en cada commit).
+Equivalent to `uv sync` + `uv run pre-commit install` (Ruff hook on every
+commit).
 
-### Configurar el entorno
+### Configure the environment
 
 ```bash
 cp .env.example .env
 ```
 
-Edita `.env`. `DATABASE_URL` y `REDIS_URL` son obligatorias: si falta alguna, la
-aplicación no arranca y el error indica la variable exacta. Las variables
-`POSTGRES_*` deben coincidir con las credenciales de `DATABASE_URL`. Nunca
-subas `.env` al repositorio.
+Edit `.env`. `DATABASE_URL` and `REDIS_URL` are required: if either is missing,
+the application will not start and the error names the exact variable. The
+`POSTGRES_*` variables must match the credentials in `DATABASE_URL`. Never
+commit `.env` to the repository.
 
-### Arrancar la API
+### Run the API
 
 ```bash
 make run
 ```
 
-Queda disponible en:
+Available at:
 
-- Documentación: <http://127.0.0.1:8000/docs>
+- Docs: <http://127.0.0.1:8000/docs>
 - Health check: <http://127.0.0.1:8000/health>
-- Raíz: <http://127.0.0.1:8000/>
+- Root: <http://127.0.0.1:8000/>
 
-### Comandos disponibles
+### Available commands
 
-Ejecuta `make` sin argumentos para ver la ayuda.
+Run `make` with no arguments to see the help.
 
-| Comando | Qué hace |
+| Command | What it does |
 |---|---|
-| `make install` | Sincroniza dependencias e instala el hook de pre-commit |
-| `make run` | Arranca uvicorn con `--reload` |
-| `make lint` | Revisa el código con Ruff |
-| `make format` | Formatea el código con Ruff |
-| `make typecheck` | Comprueba tipos con mypy en modo estricto |
-| `make test` | Ejecuta los tests |
-| `make test-cov` | Ejecuta los tests con cobertura |
-| `make check` | `lint` + `typecheck` + `test` (lo que usará el CI) |
-| `make up` | Levanta el stack de Docker Compose |
-| `make down` | Detiene el stack (conserva los volúmenes) |
-| `make logs` | Sigue los logs de Docker Compose |
-| `make clean` | Borra `__pycache__`, `.pytest_cache`, `.ruff_cache` y `.mypy_cache` |
+| `make install` | Sync dependencies and install the pre-commit hook |
+| `make run` | Start uvicorn with `--reload` |
+| `make lint` | Lint the code with Ruff |
+| `make format` | Format the code with Ruff |
+| `make typecheck` | Type-check with mypy in strict mode |
+| `make test` | Run the tests |
+| `make test-cov` | Run the tests with coverage |
+| `make check` | `lint` + `typecheck` + `test` (what CI will run) |
+| `make up` | Start the Docker Compose stack |
+| `make down` | Stop the stack (keeps volumes) |
+| `make logs` | Follow Docker Compose logs |
+| `make clean` | Remove `__pycache__`, `.pytest_cache`, `.ruff_cache`, `.mypy_cache` |
 
 ### Docker
 
 ```bash
 make up                                                # api + PostgreSQL 16 + Redis 7
-docker compose ps                                      # estado y salud
+docker compose ps                                      # status and health
 docker compose exec db pg_isready -U user -d tickets_management
 docker compose exec redis redis-cli ping               # -> PONG
 make logs
 make down
 ```
 
-`make down` conserva los datos; `docker compose down -v` borra también los
-volúmenes (destructivo). Para construir la imagen de producción:
+`make down` keeps the data; `docker compose down -v` also deletes the volumes
+(destructive). To build the production image:
 
 ```bash
 docker build --target production -t tickets-management:prod .
 ```
 
-## Estructura de carpetas
+## Folder structure
 
 ```text
 src/tickets_management/
-├── main.py             # crea la app FastAPI y registra las rutas
-├── core/               # configuración y utilidades transversales
-├── api/                # capa HTTP (v1/endpoints/)
-├── domain/             # modelos y enums del negocio
-├── schemas/            # modelos Pydantic de entrada y salida
-├── services/           # reglas de negocio
-├── repositories/       # acceso a datos (protocol.py, memory.py)
-└── workers/            # scheduler y tareas en background
+├── main.py             # creates the FastAPI app and registers the routes
+├── core/               # configuration and cross-cutting utilities
+├── api/                # HTTP layer (v1/endpoints/)
+├── domain/             # business models and enums
+├── schemas/            # Pydantic input/output models
+├── services/           # business rules
+├── repositories/       # data access (protocol.py, memory.py)
+└── workers/            # scheduler and background tasks
 tests/
 ├── unit/
 └── integration/
-docs/                   # alcance, toolchain y estructura
-alembic/                # migraciones (pendiente de configurar)
+docs/                   # scope, toolchain, and structure
+alembic/                # migrations (not configured yet)
 ```
