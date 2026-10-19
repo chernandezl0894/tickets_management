@@ -1,32 +1,14 @@
 """Tests for the project API endpoints."""
 
-from collections.abc import Iterator
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 
-from tickets_management.api.deps import get_store
 from tickets_management.domain.enum import TicketType
 from tickets_management.domain.models import Subtask, Ticket
-from tickets_management.main import app
 from tickets_management.repositories.errors import NotFoundError
 from tickets_management.repositories.memory import InMemoryStore
-
-
-@pytest.fixture
-def store() -> InMemoryStore:
-    """Return a fresh in-memory store for each test."""
-    return InMemoryStore()
-
-
-@pytest.fixture
-def client(store: InMemoryStore) -> Iterator[TestClient]:
-    """Return a client bound to the fresh store."""
-    app.dependency_overrides[get_store] = lambda: store
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
 
 
 def _payload(slug: str = "tickets") -> dict[str, str]:

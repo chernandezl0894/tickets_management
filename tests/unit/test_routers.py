@@ -55,7 +55,7 @@ def test_create_endpoints_respond_under_api_v1() -> None:
         "/api/v1/projects",
         json={
             "name": "Tickets",
-            "slug": "tickets",
+            "slug": f"tickets-{uuid4().hex[:8]}",
             "platform": "github",
             "repo_url": "https://github.com/example/tickets",
         },
@@ -63,7 +63,7 @@ def test_create_endpoints_respond_under_api_v1() -> None:
     ticket_response = client.post(
         "/api/v1/tickets",
         json={
-            "project_id": str(uuid4()),
+            "project_id": project_response.json()["id"],
             "type": "feature",
             "title": "Valid ticket title",
         },
